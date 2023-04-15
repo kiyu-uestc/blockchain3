@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.6.10;
 
 import "./Library.sol";
 
-contract FoodTraceability {
+contract food {
     address adminAddr;  // 管理员地址
-    
+   
     struct Producer {
         bytes32 id;  // 生产商唯一标识
         bytes32 name;  // 生产商名称
@@ -51,18 +51,18 @@ contract FoodTraceability {
         address from; // 采购来源地址
         address to; // 采购目的地址
     }
-    
+   
     constructor() public {
         adminAddr = msg.sender; // 初始化管理员地址
     }
 
-    string[] Producers; // 生产商列表
-    string[] Distributors; // 分销商列表
-    string[] Retailers; // 零售商列表
-    string[] Customers; // 顾客列表
-    string[] Productions; // 产品列表
-
-    mapping (bytes32 => purchaseData) purchaseDataMap; // 采购数据映射 
+    bytes32[] Distributors; // 分销商列表
+    bytes32[] Retailers; // 零售商列表
+    bytes32[] Customers; // 顾客列表
+    bytes32[] Productions; // 产品列表
+    bytes32[] Producers;
+   
+    mapping (bytes32 => purchaseData) purchaseDataMap; // 采购数据映射
     mapping (address => Producer) ProducersMap;        // 生产商映射
     mapping (address => Distributor) DistributorsMap;  // 分销商映射
     mapping (address => Retailer) RetailersMap;        // 零售商映射
@@ -70,7 +70,7 @@ contract FoodTraceability {
     mapping (bytes32 => Production) ProductionsMap;    // 产品映射
     mapping (bytes32 => purchase) purchaseMap;         // 采购信息映射
     mapping (bytes32 => address) ProducerAddrMap;//根据产品id获取生产商地址的映射
-    
+   
     event ProducerCreated(bytes32); // 生产商创建事件
     event DistributorCreated(bytes32 indexed distributorId); // 分销商创建事件
     event RetailerCreated(bytes32 indexed retailerId); // 零售商创建事件
@@ -78,21 +78,21 @@ contract FoodTraceability {
     event ProductCreated(bytes32 indexed productId); // 产品创建事件
     event ProductPurchased(bytes32 indexed productId); // 产品采购事件
 
-    
+   
     function createProducer(bytes32 _id, bytes32 _name, address _addr, bool _produceprivilege, bool _status) public { // 创建生产商
         ProducersMap[_addr] = Producer(_id, _name, _addr, _produceprivilege, _status);  // 将生产商信息添加到生产商映射中
         Producers.push(_id); // 将生产商名称添加到生产商列表中
         emit ProducerCreated(_id); // 触发生产商创建事件
     }
-    
+   
     function createDistributor(bytes32 _id, bytes32 _name, address _addr, bool _purchaseprivilege, bool _status) public { // 创建分销商
-        DistributorsMap[_addr] = Distributor(_id, _name, _addr, _purchaseprivilege, _status); 
+        DistributorsMap[_addr] = Distributor(_id, _name, _addr, _purchaseprivilege, _status);
         Distributors.push(_id); // 将分销商名称添加到分销商列表中
         emit DistributorCreated(_id); // 触发分销商创建事件
     }
 
     function createRetailer(bytes32 _id, bytes32 _name, address _addr) public { // 创建零售商
-        RetailersMap[_addr] = Retailer(_id, _name, _addr); 
+        RetailersMap[_addr] = Retailer(_id, _name, _addr);
         Retailers.push(_id); // 将零售商名称添加到零售商列表中
         emit RetailerCreated(_id); // 触发零售商创建事件
     }
@@ -108,7 +108,7 @@ contract FoodTraceability {
         require(ProducersMap[msg.sender].produceprivilege == true, "Producer does not have the privilege to produce.");
         //将产品信息添加到产品映射中
         ProductionsMap[_id] = Production(_name, _id, _price, _quantity, _productiondate, _productionaddr);
-        Productions.push(_id); // 将产品名称添加到产品列表中 
+        Productions.push(_id); // 将产品名称添加到产品列表中
         emit ProductCreated(_id); // 触发产品创建事件
     }
 
@@ -122,47 +122,43 @@ contract FoodTraceability {
         //生成hash值赋值给_hash
         bytes32 _hash = keccak256(abi.encodePacked(_id, _price, _quantity, _date, _addr, msg.sender, _producerAddr));
         //将采购信息添加到采购信息映射中
-        purchaseMap[_id] = purchase(_hash); 
+        purchaseMap[_id] = purchase(_hash);
         //将采购数据添加到采购数据映射中
         purchaseDataMap[_hash] = purchaseData(_id, _price, _quantity, _date, _addr, msg.sender, _producerAddr);
         emit ProductPurchased(_id); // 触发产品采购事件
     }
 
-    function ret_purchase_Product(bytes32 _id, bytes32 _price, bytes32 _quantity, bytes32 _date, bytes32 _addr) public { // 采购产品
+    function ret_purchase_Product(bytes32 _id, bytes32 _price, bytes32 _quantity, bytes32 _date, bytes32 _addr, address _distributorAddr) public { // 采购产品
         //要求产品存在
         require(ProductionsMap[_id].id != 0, "Product does not exist.");
-        //获取分销商地址
-        address _distributorAddr = purchaseDataMap[purchaseMap[_id].hash].distributorAddr;
         //生成hash值赋值给_hash
         bytes32 _hash = keccak256(abi.encodePacked(_id, _price, _quantity, _date, _addr, msg.sender, _distributorAddr));
         //将采购信息添加到采购信息映射中
-        purchaseMap[_id] = purchase(_hash); 
+        purchaseMap[_id] = purchase(_hash);
         //将采购数据添加到采购数据映射中
         purchaseDataMap[_hash] = purchaseData(_id, _price, _quantity, _date, _addr, msg.sender, _distributorAddr);
         emit ProductPurchased(_id); // 触发产品采购事件
     }
 
-    function cus_purchase_Product(bytes32 _id, bytes32 _price, bytes32 _quantity, bytes32 _date, bytes32 _addr) public { // 采购产品
+    function cus_purchase_Product(bytes32 _id, bytes32 _price, bytes32 _quantity, bytes32 _date, bytes32 _addr, address _retailerAddr) public { // 采购产品
         //要求产品存在
         require(ProductionsMap[_id].id != 0, "Product does not exist.");
-        //获取零售商地址
-        address _retailerAddr = purchaseDataMap[purchaseMap[_id].hash].retailerAddr;
         //生成hash值赋值给_hash
         bytes32 _hash = keccak256(abi.encodePacked(_id, _price, _quantity, _date, _addr, msg.sender, _retailerAddr));
         //将采购信息添加到采购信息映射中
-        purchaseMap[_id] = purchase(_hash); 
+        purchaseMap[_id] = purchase(_hash);
         //将采购数据添加到采购数据映射中
         purchaseDataMap[_hash] = purchaseData(_id, _price, _quantity, _date, _addr, msg.sender, _retailerAddr);
         emit ProductPurchased(_id); // 触发产品采购事件
     }
 
     //溯源查询功能：通过输入商品唯一信息，可以查询商品的所有流转记录
-    function queryPurchase(bytes32 _id) public view returns (bytes32, bytes32, bytes32, bytes32, bytes32, bytes32, bytes32) {
+    function queryPurchase(bytes32 _id) public view returns (bytes32, bytes32, bytes32, bytes32, bytes32) {
         //要求产品存在
         require(ProductionsMap[_id].id != 0, "Product does not exist.");
         //获取采购数据
         purchaseData memory _purchaseData = purchaseDataMap[purchaseMap[_id].hash];
         //返回采购数据
-        return (_purchaseData.id, _purchaseData.price, _purchaseData.quantity, _purchaseData.date, _purchaseData.addr, _purchaseData.customerAddr, _purchaseData.distributorAddr);
+        return (_purchaseData.id, _purchaseData.price, _purchaseData.quantity, _purchaseData.date, _purchaseData.addr);
     }
-}    
+}   
