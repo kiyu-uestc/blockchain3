@@ -45,10 +45,10 @@ public class UserService {
      */
     public Result login(@RequestBody LoginBO loginBO) {
         if (StrUtil.isEmpty(loginBO.getAddress())) {
-            return Result.fail(1,"登录信息有误，请重试");
+            return Result.fail(1,"登录信息有误，请重试"); 
         }
 
-        List funcParam = new ArrayList();
+        List funcParam = new ArrayList();  
         funcParam.add(loginBO.getAddress());
 
         String _result = weBASEUtil.funcPost("getBank",funcParam);

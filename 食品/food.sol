@@ -161,4 +161,5 @@ contract food {
         //返回采购数据
         return (_purchaseData.id, _purchaseData.price, _purchaseData.quantity, _purchaseData.date, _purchaseData.addr);
     }
+    
 }   
